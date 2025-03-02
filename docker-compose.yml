@@ -1,0 +1,83 @@
+version: '3.7'
+
+services:
+  krakend:
+    image: devopsfaith/krakend:2.4.3
+    ports:
+      - "8080:8080"  # Puerto del API Gateway
+      - "8090:8090"  # Métricas
+    volumes:
+      - ./krakend/krakend.json:/etc/krakend/krakend.json
+    depends_on:
+      - auth-service
+      - user-service
+      - product-service
+      - prometheus
+      - elasticsearch
+    networks:
+      - monitoring-net
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      - JWT_SECRET=supersecretkey
+      - PORT=8000
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    networks:
+      - monitoring-net
+
+  user-service:
+    build: ./user-service
+    environment:
+      - JWT_SECRET=supersecretkey
+      - PORT=8001
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    networks:
+      - monitoring-net
+
+  product-service:
+    build: ./product-service
+    environment:
+      - JWT_SECRET=supersecretkey
+      - PORT=8002
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    networks:
+      - monitoring-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - monitoring-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - monitoring-net
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+
+volumes:
+  grafana-storage:

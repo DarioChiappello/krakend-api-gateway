@@ -1,0 +1,96 @@
+{
+  "version": 3,
+  "name": "KrakenD API Gateway",
+  "port": 8080,
+  "extra_config": {
+    "telemetry/prometheus": {
+      "port": 9090,
+      "namespace": "krakend"
+    },
+    "logs/elastic": {
+      "enabled": true,
+      "host": "http://elasticsearch:9200",
+      "index": "krakend-logs"
+    },
+    "telemetry/logging": {
+      "level": "DEBUG",
+      "prefix": "[KRAKEND]"
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/login",
+      "method": "POST",
+      "backend": [
+        {
+          "url_pattern": "/login",
+          "host": ["http://auth-service:8000"],
+          "return_error_details": true,
+          "allowed_status": [200, 400, 401],
+          "extra_config": {
+            "github.com/devopsfaith/krakend/proxy": {
+              "static": {
+                "strategy": "always",
+                "status_code": 204  
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/users/{id}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/users/{id}",
+          "host": ["http://user-service:8001"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/products",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/products",
+          "host": ["http://product-service:8002"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/product-filtering/{id}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/product/{id}",
+          "host": ["http://product-service:8002"],
+          "deny": [
+            "price",
+            "stock"
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "/user-products/{userId}",
+      "method": "GET",
+      "backend": [
+        {
+          "host": ["http://user-service:8001"],
+          "url_pattern": "/users/{userId}"
+        },
+        {
+          "host": ["http://product-service:8002"],
+          "url_pattern": "/products",
+          "@comment": "We assume the response from /users contains information about the user's products"
+        }
+      ],
+      "extra_config": {
+        "proxy": {
+          "sequential": true
+        }
+      }
+    }
+  ]
+}
