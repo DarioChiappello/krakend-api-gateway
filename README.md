@@ -5,7 +5,7 @@
 This project sets up an API Gateway using KrakenD to route requests to multiple microservices.
 
 ```
-+-----------------+
+                            +-----------------+
                             |   Prometheus    |
                             +--------+--------+
                                      | 9090
